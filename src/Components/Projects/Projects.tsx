@@ -1,6 +1,5 @@
 import axios from "axios";
 import { useContext, useEffect, useState } from "react";
-import NoData from "./../../Shared/NoData/NoData";
 import noData from "./../../assets/images/no-data.png";
 import Modal from "react-bootstrap/Modal";
 import { AuthContext } from "./../../Context/AuthContext";
@@ -10,26 +9,52 @@ import { useForm } from "react-hook-form";
 import CustomPagination from "../../Shared/CustomPagination/CustomPagination";
 import style from "../Projects/Projects.module.css";
 import Loading from "../../Shared/Loading/Loading";
+import NoData from "../../Shared/noData/noData";
+
+interface Task {
+  taskId: number;
+  taskName: string;
+  taskStatus: string;
+}
+interface Project {
+  id: number;
+  title: string;
+  description: string;
+  task: Task[];
+  creationDate: string;
+}
+
+interface ProjectDetails {
+  title: string;
+  description: string;
+  creationDate: string;
+}
+
+interface FormValues {
+  title: string;
+  description: string;
+}
 
 const Projects: React.FC = () => {
-  const { baseUrl, requestHeaders, userRole }: any = useContext(AuthContext);
-  const { getToastValue }: any = useContext(ToastContext);
-  const [project, setProject] = useState({});
-  const [projectDetails, setProjectDetails] = useState({});
+  const { baseUrl, requestHeaders, userRole } = useContext(AuthContext);
+  const { getToastValue } = useContext(ToastContext);
+  const [project, setProject] = useState<Project | {}>({});
+  // const [projectDetails, setProjectDetails] = useState<ProjectDetails | {}>({});
+  const [projectDetails, setProjectDetails] = useState<ProjectDetails>({
+    title: '',
+    description: '',
+    creationDate: ''
+  });
   const [projects, setProjects] = useState([]);
-  let [itemId, setItemId]: any = useState(0);
-  const [isLoading, setIsLoading] = useState(false);
-  const [timerId, setTimerId] = useState(null);
+  const [itemId, setItemId] = useState<number>(0);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [timerId, setTimerId] = useState<number>();
   // *********search***********
-  const [searchString, setSearchString] = useState("");
+  const [searchString, setSearchString] = useState<string>("");
   // *******pagination*******
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pagesArray, setPagesArray] = useState([]);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [pagesArray, setPagesArray] = useState<number[]>([]);
 
-  interface FormValues {
-    title: string;
-    description: string;
-  }
   const {
     register,
     setValue,
@@ -39,7 +64,7 @@ const Projects: React.FC = () => {
   // *************************
 
   // **********to use more than one modal in same component**********
-  const [modalState, setModalState] = useState("close");
+  const [modalState, setModalState] = useState<string>("close");
   // ********to close modal*******************
   const handleClose = () => setModalState("close");
   // ********to show view modal*******************
@@ -49,7 +74,7 @@ const Projects: React.FC = () => {
     getPtojectDetails(id);
   };
   // ***********update modal******************
-  const showUpdateModal = (project: any) => {
+  const showUpdateModal = (project: Project) => {
     setItemId(project.id);
     setValue("title", project.title);
     setValue("description", project.description);
@@ -82,7 +107,7 @@ const Projects: React.FC = () => {
         // console.log("list", response?.data?.data);
         setPagesArray(
           Array(response?.data?.totalNumberOfPages)
-            .fill()
+            .fill(0)
             .map((_, i) => i + 1)
         );
         setProjects(response?.data?.data);
@@ -100,7 +125,7 @@ const Projects: React.FC = () => {
   };
 
   //****************update project**********************
-  const updateProject = (data: any) => {
+  const updateProject = (data: FormValues) => {
     setIsLoading(true);
     axios
       .put(`${baseUrl}/Project/${itemId}`, data, {
@@ -109,7 +134,7 @@ const Projects: React.FC = () => {
       .then((response) => {
         handleClose();
 
-        getAllProjectsList();
+        getAllProjectsList(currentPage, searchString);
         getToastValue(
           "success",
           response?.data?.message || "Project updated suceessfully"
@@ -140,7 +165,7 @@ const Projects: React.FC = () => {
           response?.data?.message || "project deleted successfully"
         );
 
-        getAllProjectsList();
+        getAllProjectsList(currentPage, searchString);
       })
       .catch((error) => {
         getToastValue(
@@ -169,7 +194,7 @@ const Projects: React.FC = () => {
   };
   // *****************************************************
   // **********search by proj name***********************
-  const getProjectTitleValue = (e: MouseEvent) => {
+  const getProjectTitleValue = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchString(e.target.value);
   };
   // ************************
@@ -182,22 +207,19 @@ const Projects: React.FC = () => {
       getAllProjectsList(1, searchString);
     }, 500);
     setTimerId(newTimeOut);
-  }, [userRole,searchString]);
+  }, [userRole, searchString]);
 
   // useEffect(() => {
-
 
   //   getAllProjectsList(currentPage);
   // }, [userRole,currentPage]);
   useEffect(() => {
-    if (userRole === 'Manager') {
-      getAllProjectsList(currentPage)
-
-    } else if (userRole === 'Employee') {
-      getAllProjectsList(currentPage)
+    if (userRole === "Manager") {
+      getAllProjectsList(currentPage, searchString);
+    } else if (userRole === "Employee") {
+      getAllProjectsList(currentPage, searchString);
     }
   }, [userRole, currentPage]);
-
 
   return (
     <>
@@ -249,20 +271,17 @@ const Projects: React.FC = () => {
               {!isLoading ? (
                 <>
                   {projects?.length > 0 ? (
-                    projects.map((project: any) => (
+                    projects.map((project: Project) => (
                       <tr key={project?.id}>
                         <td>{project?.title}</td>
                         <td>{project?.description}</td>
                         <td>{project?.task?.length}</td>
                         {userRole == "Manager" ? (
                           <td>
-
-
                             <button
                               className="border-0 icon-bg-custom"
                               onClick={() => showViewModal(project?.id)}
                             >
-
                               <i className="fa fa-eye  text-info px-2"></i>
                             </button>
 
@@ -276,10 +295,9 @@ const Projects: React.FC = () => {
                             <button
                               className="icon-bg-custom border-0"
                               onClick={() => showDeleteModal(project.id)}
-                            ><i className="fa fa-trash  text-danger"></i>
+                            >
+                              <i className="fa fa-trash  text-danger"></i>
                             </button>
-
-
                           </td>
                         ) : (
                           <td>
@@ -292,7 +310,7 @@ const Projects: React.FC = () => {
                     ))
                   ) : (
                     <tr>
-                      <td colspan="4">
+                      <td colSpan={4}>
                         <NoData />
                       </td>
                     </tr>
@@ -301,7 +319,7 @@ const Projects: React.FC = () => {
               ) : (
                 <tr>
                   {" "}
-                  <td colspan="4">
+                  <td colSpan={4}>
                     <Loading />
                   </td>
                 </tr>
@@ -315,18 +333,26 @@ const Projects: React.FC = () => {
             </Modal.Header>
             <Modal.Body>
               <>
-                <p>
-                  <span className="text-warning">Title :&nbsp;</span>
-                  {projectDetails?.title}
-                </p>
-                <p>
-                  <span className="text-warning">description :&nbsp;</span>
-                  {projectDetails?.description}
-                </p>
-                <p>
-                  <span className="text-warning">creation Date :&nbsp;</span>
-                  {new Date(projectDetails?.creationDate).toLocaleDateString()}
-                </p>
+                {projectDetails && (
+                  <>
+                    <p>
+                      <span className="text-warning">Title :&nbsp;</span>
+                      {projectDetails?.title}
+                    </p>
+                    <p>
+                      <span className="text-warning">description :&nbsp;</span>
+                      {projectDetails?.description}
+                    </p>
+                    <p>
+                      <span className="text-warning">
+                        creation Date :&nbsp;
+                      </span>
+                      {new Date(
+                        projectDetails?.creationDate
+                      ).toLocaleDateString()}
+                    </p>
+                  </>
+                )}
               </>
             </Modal.Body>
           </Modal>
@@ -366,7 +392,6 @@ const Projects: React.FC = () => {
                       required: true,
                     })}
                     rows={5}
-                    type="text"
                     name="description"
                     className="form-control"
                     placeholder="Enter description..."

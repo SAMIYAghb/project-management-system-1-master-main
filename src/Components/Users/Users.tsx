@@ -5,24 +5,43 @@ import axios from 'axios';
 import Modal from 'react-bootstrap/Modal';
 import style from '../Users/Users.module.css';
 import noData from "../../../src/assets/images/no-data.png"
-import NoData from '../../Shared/NoData/NoData';
+import NoData from '../../Shared/noData/noData';
 import CustomPagination from '../../Shared/CustomPagination/CustomPagination';
 import Loading from '../../Shared/Loading/Loading';
 
+interface User {
+  id: number;
+  userName: string;
+  isActivated: boolean;
+  phoneNumber: string;
+  email: string;
+  creationDate: string;
+  imagePath?: string;
+}
+
+interface UserDetails {
+  userName: string;
+  email: string;
+  phoneNumber: string;
+  imagePath?: string;
+}
+
 
 export default function Users() {
-
   const { baseUrl, requestHeaders } = useContext(AuthContext);
   const { getToastValue }: any = useContext(ToastContext);
-  const [userList, setUserList] = useState<any[]>([]);
+
+  const [userList, setUserList] = useState<User[]>([]);
   const [itemId, setItemId] = useState<number>(0);
-  const [searchString, setSearchString] = useState('');
-  const [modelState, setModelState] = useState("close")
-  const [userDetails, setUserDetails] = useState({});
-  const [timerId, setTimerId] = useState(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pagesArray, setPagesArray] = useState([])
-  const [isLoading, setIsLoading] = useState(false);
+  const [searchString, setSearchString] = useState<string>('');
+  const [modelState, setModelState] = useState<string>("close")
+  const [userDetails, setUserDetails] = useState<UserDetails | null>(null);
+  // const [timerId, setTimerId] = useState(null);
+  const [timerId, setTimerId] = useState<ReturnType<typeof setTimeout> | null>(null);
+
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [pagesArray, setPagesArray] = useState<number[]>([])
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
   const handleClose = () => setModelState("close");
   // Get All users
@@ -37,7 +56,7 @@ export default function Users() {
       }
     })
       .then((response) => {
-        setPagesArray(Array(response.data.totalNumberOfPages).fill().map((_, i) => i + 1));
+        setPagesArray(Array(response.data.totalNumberOfPages).fill(0).map((_, i) => i + 1));
         setUserList(response?.data?.data);
       })
       .catch((error) => {
@@ -48,7 +67,7 @@ export default function Users() {
       });
   }
   //View Users API
-  const getUsersDetails = (id) => {
+  const getUsersDetails = (id: number) => {
     axios
       .get(`${baseUrl}/Users/${id}`, {
         headers: requestHeaders,
@@ -70,7 +89,7 @@ export default function Users() {
     })
       .then((response) => {
         console.log(response);
-        getAllUsers();
+        getAllUsers(currentPage, searchString);
         getToastValue("success", response?.data?.message || "Updated Sucessfully")
       })
       .catch((error) => {
@@ -105,12 +124,12 @@ export default function Users() {
   }, [searchString]);
 
   // Search by name
-  const getNameValue = (input: string) => {
+  const getNameValue = (input: React.ChangeEvent<HTMLInputElement>) => {
     setSearchString(input.target.value);
     // getAllUsers(1, input.target.value);
   }
   useEffect(() => {
-    getAllUsers(currentPage);
+    getAllUsers(currentPage, searchString);
   }, [currentPage]);
 
 
@@ -210,7 +229,7 @@ export default function Users() {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan="6">
+                      <td colSpan={6}>
                         <NoData />
                       </td>
                     </tr>
@@ -218,7 +237,7 @@ export default function Users() {
                 </>
               ) : (
                 <tr>
-                  <td colSpan="6">
+                  <td colSpan={6}>
                     <Loading />
                   </td>
                 </tr>

@@ -9,29 +9,23 @@ export interface ITheme {
 interface ThemeContextProviderProps {
   children: ReactNode;
 }
-export const ThemeContext = createContext<ITheme | null>(null);
+export const ThemeContext = createContext<ITheme | undefined>(undefined);
 
-const ThemeContextProvider: React.FC<ThemeContextProviderProps> = (props) => {
-  // const [isDarkMode, setIsDarkMode] = useState(() => {
-
-  //     const savedTheme =localStorage.getItem("isDarkMode");
-
-  //     return savedTheme === 'true'; // Convert the stored string to a boolean
-  // });
-
-  // JSON.parse(localStorage.getItem("isDarkMode")) / convert string "true" or "false" to true and false
-  const [isDarkMode, setIsDarkMode] = useState<boolean>(
-    () => JSON.parse(localStorage.getItem("isDarkMode")) ?? true
-  );
+const ThemeContextProvider: React.FC<ThemeContextProviderProps> = ({
+  children,
+}) => {
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
+    const savedTheme = localStorage.getItem("isDarkMode");
+    return savedTheme ? JSON.parse(savedTheme) : true; // Par défaut : mode sombre
+  });
 
   const toggleTheme = () => {
-    // setTheme((current)=> (current === 'light' ? 'dark' : 'light' ))
     setIsDarkMode((previousValue: boolean) => !previousValue);
   };
   useEffect(() => {
     // Save the theme preference to localStorage
 
-    localStorage.setItem("isDarkMode", isDarkMode);
+    localStorage.setItem("isDarkMode", JSON.stringify(isDarkMode));
   }, [isDarkMode]);
 
   // isDarkMode variable  is used to condition the rendering according to the theme.
@@ -45,7 +39,7 @@ const ThemeContextProvider: React.FC<ThemeContextProviderProps> = (props) => {
   };
   return (
     <ThemeContext.Provider value={contextValue}>
-      {props.children}
+      {children}
     </ThemeContext.Provider>
   );
 };

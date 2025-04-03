@@ -1,58 +1,88 @@
-
 import axios from "axios";
-import React, { useContext,createContext, ReactNode, useState , useEffect} from "react";
-// import { ToastContext } from './ToastContext';
+import React, {
+  useContext,
+  createContext,
+  ReactNode,
+  useState,
+  useEffect,
+  useCallback
+} from "react";
 import { AuthContext } from "./AuthContext";
 
-
-export interface ProjectContextType {
-    getAllProjectsList: () => void;
-    projects:{ title: string, description: string }[];
+// Définition du type pour les projets
+export interface Project {
+  title: string;
+  description: string;
 }
-// Create the AuthContext and set the initial value to null
-export const ProjectContext = createContext<ProjectContextType  | null>(null);
 
+// Définition du type du contexte
+export interface ProjectContextType {
+  getAllProjectsList: () => void;
+  projects: Project[];
+  isLoading: boolean;
+}
+
+// Create the AuthContext and set the initial value to null
+export const ProjectContext = createContext<ProjectContextType>({
+  getAllProjectsList: () => {},
+  projects: [],
+  isLoading: false,
+});
+
+// Définition des props pour le provider
 interface ProjectContextProviderProps {
-    children: ReactNode;
+  children: ReactNode;
+}
+
+// Composant `ProjectContextProvider
+export const ProjectContextProvider: React.FC<ProjectContextProviderProps> = ({
+  children,
+}) => {
+  const authContext = useContext(AuthContext);
+
+  if (!authContext) {
+    throw new Error(
+      "ProjectContextProvider must be used within an AuthContextProvider"
+    );
   }
 
-  export const ProjectContextProvider: React.FC<ProjectContextProviderProps> = (props) => {
-    const { baseUrl, requestHeaders }: any = useContext(AuthContext);
-    // const { getToastValue }: any = useContext(ToastContext);
-    const [projects, setProjects] = useState<{ title: string; description: string }[]>([]);
-    console.log(projects, "from projectContext");
-    const [isLoading, setIsLoading] = useState(false);
+  const { baseUrl, requestHeaders } = useContext(AuthContext);
+  const [projects, setProjects] = useState<Project[]>([]);
+  // console.log(projects, "from projectContext");
 
-    const getAllProjectsList = () => {
-        setIsLoading(true);
-        axios
-          .get(`${baseUrl}/Project/manager`, { headers: requestHeaders })
-          .then((response) => {
-            setIsLoading(false);
-            console.log(response?.data[0].title);
-            setProjects(response?.data);
-          })
-          .catch((error) => {
-            setIsLoading(false);
-            // getToastValue(
-            //   "error",
-            //   error?.response?.data?.message ||
-            //     "An error occurred. Please try again."
-            // );
-          });
-      };
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
-      useEffect(() => {
-        getAllProjectsList();
-      }, [])
+  const getAllProjectsList = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const response = await axios.get<Project[]>(
+        `${baseUrl}/Project/manager`,
+        {
+          headers: requestHeaders,
+        }
+      );
+      setProjects(response.data);
+    } catch (error) {
+      console.error("Erreur lors de la récupération des projets :", error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [baseUrl, requestHeaders]);
 
-    // Value to be provided by the context
+  useEffect(() => {
+    getAllProjectsList();
+  }, [getAllProjectsList]);
+
+  // Value to be provided by the context
   const contextValue: ProjectContextType = {
     getAllProjectsList,
     projects,
-  }
+    isLoading,
+  };
 
-    return <ProjectContext.Provider value={contextValue}>
-        {props.children}
-        </ProjectContext.Provider>;
-  }
+  return (
+    <ProjectContext.Provider value={contextValue}>
+      {children}
+    </ProjectContext.Provider>
+  );
+};
